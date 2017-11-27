@@ -1,11 +1,9 @@
 package org.metadatacenter.schemaorg.pipeline.server.resources;
 
-import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -21,34 +19,24 @@ import org.metadatacenter.schemaorg.pipeline.operation.translate.TranslatorHandl
 import org.metadatacenter.schemaorg.pipeline.operation.translate.XsltTranslatorHandler;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.DataSource;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.DataSourceTypes;
+import org.metadatacenter.schemaorg.pipeline.server.pojo.InputObject;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.Mapping;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.MappingLanguages;
-import org.metadatacenter.schemaorg.pipeline.server.pojo.InputObject;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
-@Path("/operations")
+@Path("/pipeline")
 public class OperationResource {
-
-  private static final String PARAM_TO = "to";
-  private static final List<String> TRANSLATION_OPTIONS = Lists.newArrayList();
-  static {
-    TRANSLATION_OPTIONS.add("sparql");
-    TRANSLATION_OPTIONS.add("xslt");
-  }
 
   @POST
   @Timed
-  @Path("/translate")
+  @Path("/map2sparql")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.TEXT_PLAIN)
-  public Response translate(@QueryParam(PARAM_TO) String value, InputObject ino) {
+  public Response toSparql(InputObject ino) {
     try {
-      checkArgument(value);
       final Mapping mapping = checkMappingValid(ino.getMapping());
-      TranslatorHandler handler = getTranslationHandler(value);
-      String output = MapNodeTranslator.translate(handler, mapping.getValue(), mapping.getLanguage());
+      String output = translateToSparql(mapping);
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
@@ -60,29 +48,43 @@ public class OperationResource {
 
   @POST
   @Timed
-  @Path("/transform")
+  @Path("/map2xslt")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.TEXT_PLAIN)
+  public Response toXslt(InputObject ino) {
+    try {
+      final Mapping mapping = checkMappingValid(ino.getMapping());
+      String output = translateToXslt(mapping);
+      return Response.status(Status.OK).entity(output).build();
+    } catch (Exception e) {
+      String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      return Response.status(Status.BAD_REQUEST)
+          .type(MediaType.APPLICATION_JSON_TYPE)
+          .entity(errorMessage).build();
+    }
+  }
+
+  @POST
+  @Timed
+  @Path("/data2schema")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response transform(InputObject ino) {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      final String mappingLanguage = mapping.getLanguage();
-      final String mappingText = mapping.getValue();
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
       if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
-        TranslatorHandler handler = new SparqlConstructTranslatorHandler();
-        String sparqlQuery = MapNodeTranslator.translate(handler, mappingText, mappingLanguage);
+        String sparqlQuery = translateToSparql(mapping);
         SparqlEndpointClient endpointClient = new SparqlEndpointClient(dataSourceValue);
         output = Pipeline.create()
-            .pipe(s -> endpointClient.evaluatePreparedQuery(s))
+            .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
-        TranslatorHandler handler = new XsltTranslatorHandler();
-        String stylesheet = MapNodeTranslator.translate(handler, mappingText, mappingLanguage);
+        String stylesheet = translateToXslt(mapping);
         XsltTransformer transformer = XsltTransformer.newTransformer(stylesheet);
         output = Pipeline.create()
             .pipe(transformer::transform)
@@ -100,30 +102,26 @@ public class OperationResource {
 
   @POST
   @Timed
-  @Path("/embed")
+  @Path("/data2html")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.TEXT_HTML)
   public Response embed(InputObject ino) {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      final String mappingLanguage = mapping.getLanguage();
-      final String mappingText = mapping.getValue();
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
       if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
-        TranslatorHandler handler = new SparqlConstructTranslatorHandler();
-        String sparqlQuery = MapNodeTranslator.translate(handler, mappingText, mappingLanguage);
+        String sparqlQuery = translateToSparql(mapping);
         SparqlEndpointClient endpointClient = new SparqlEndpointClient(dataSourceValue);
         output = Pipeline.create()
-            .pipe(s -> endpointClient.evaluatePreparedQuery(s))
+            .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
             .pipe(SchemaToHtml::transform)
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
-        TranslatorHandler handler = new XsltTranslatorHandler();
-        String stylesheet = MapNodeTranslator.translate(handler, mappingText, mappingLanguage);
+        String stylesheet = translateToXslt(mapping);
         XsltTransformer transformer = XsltTransformer.newTransformer(stylesheet);
         output = Pipeline.create()
             .pipe(transformer::transform)
@@ -140,14 +138,16 @@ public class OperationResource {
     }
   }
 
-  private TranslatorHandler getTranslationHandler(String name) throws Exception {
-    TranslatorHandler handler = null;
-    if ("sparql".equals(name)) {
-      handler = new SparqlConstructTranslatorHandler();
-    } else if ("xslt".equals(name)) {
-      handler = new XsltTranslatorHandler();
-    }
-    return handler;
+  private String translateToSparql(final Mapping mapping) {
+    TranslatorHandler handler = new SparqlConstructTranslatorHandler();
+    String output = MapNodeTranslator.translate(handler, mapping.getValue(), mapping.getLanguage());
+    return output;
+  }
+
+  private String translateToXslt(final Mapping mapping) {
+    TranslatorHandler handler = new XsltTranslatorHandler();
+    String output = MapNodeTranslator.translate(handler, mapping.getValue(), mapping.getLanguage());
+    return output;
   }
 
   /*
@@ -156,18 +156,6 @@ public class OperationResource {
 
   private static String toJsonErrorMessage(int responseCode, String message) {
     return String.format("{ \"responseCode\": \"%s\", \"message\": \"%s\" }", responseCode, message);
-  }
-
-  private static void checkArgument(String parameterValue) throws Exception {
-    if (Strings.isNullOrEmpty(parameterValue)) {
-      String errorMessage = String.format("Missing argument /translate?to=%s", TRANSLATION_OPTIONS);
-      throw new Exception(errorMessage);
-    }
-    if (!TRANSLATION_OPTIONS.contains(parameterValue)) {
-      String errorMessage = String.format("Invalid argument /translate?to=%s, must be the following: %s",
-          parameterValue, TRANSLATION_OPTIONS);
-      throw new Exception(errorMessage);
-    }
   }
 
   private static Mapping checkMappingValid(Mapping mapping) throws Exception {
