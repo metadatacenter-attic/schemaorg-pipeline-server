@@ -66,6 +66,31 @@ public class OperationResource {
 
   @POST
   @Timed
+  @Path("/map2query")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.TEXT_PLAIN)
+  public Response toQueryLanguage(InputObject ino) {
+    try {
+      final Mapping mapping = checkMappingValid(ino.getMapping());
+      final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
+      final String dataSourceType = dataSource.getType();
+      String output = "";
+      if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
+        output = translateToSparql(mapping);
+      } else if (dataSourceType.equals(DataSourceTypes.XML)) {
+        output = translateToXslt(mapping);
+      }
+      return Response.status(Status.OK).entity(output).build();
+    } catch (Exception e) {
+      String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      return Response.status(Status.BAD_REQUEST)
+          .type(MediaType.APPLICATION_JSON_TYPE)
+          .entity(errorMessage).build();
+    }
+  }
+
+  @POST
+  @Timed
   @Path("/data2schema")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
