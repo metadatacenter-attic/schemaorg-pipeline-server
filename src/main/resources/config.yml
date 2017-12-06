@@ -1,1 +1,19 @@
 serviceVersion: 1.0
+logging:
+  level: INFO
+  loggers:
+    org.metadatacenter: DEBUG
+    org.metadatacenter.server.neo4j.proxy.AbstractNeo4JProxy: INFO
+    org.metadatacenter.config: DEBUG
+  appenders:
+    - type: console
+      threshold: ALL
+      timeZone: UTC
+      target: stdout
+    - type: file
+      currentLogFilename: ${SERVER_HOME}/log/pipeline.log
+      threshold: ALL
+      archive: true
+      archivedLogFilenamePattern: ${SERVER_HOME}/log/pipeline-%d.log
+      archivedFileCount: 30
+      timeZone: UTC
