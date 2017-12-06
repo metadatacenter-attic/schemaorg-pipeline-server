@@ -2,9 +2,9 @@ serviceVersion: 1.0
 logging:
   level: INFO
   loggers:
-    org.metadatacenter: DEBUG
-    org.metadatacenter.server.neo4j.proxy.AbstractNeo4JProxy: INFO
-    org.metadatacenter.config: DEBUG
+    org.metadatacenter.schemaorg: INFO
+    RMLMappingFactory: "OFF"
+    TriplesMapExtractor: "OFF"
   appenders:
     - type: console
       threshold: ALL
