@@ -23,10 +23,28 @@
       <version>0.1.1-SNAPSHOT</version>
       <exclusions>
         <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>xom</groupId>
+          <artifactId>xom</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-log4j12</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient-cache</artifactId>
+      <version>4.5.4</version>
     </dependency>
     <dependency>
       <groupId>io.dropwizard</groupId>
