@@ -45,10 +45,9 @@ public class OperationResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Response all(InputObject ino) {
     try {
+      logger.info("POST /pipeline/end2end\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      logger.info(jsonWriter.writeValueAsString(mapping));
-      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       Map<String, String> output = Maps.newLinkedHashMap();
       if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
@@ -93,8 +92,8 @@ public class OperationResource {
   @Produces(MediaType.TEXT_PLAIN)
   public Response toSparql(InputObject ino) {
     try {
+      logger.info("POST /pipeline/map2sparql\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
-      logger.info(jsonWriter.writeValueAsString(mapping));
       String output = translateToSparql(mapping);
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
@@ -113,8 +112,8 @@ public class OperationResource {
   @Produces(MediaType.TEXT_PLAIN)
   public Response toXslt(InputObject ino) {
     try {
+      logger.info("POST /pipeline/map2xslt\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
-      logger.info(jsonWriter.writeValueAsString(mapping));
       String output = translateToXslt(mapping);
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
@@ -133,10 +132,9 @@ public class OperationResource {
   @Produces(MediaType.TEXT_PLAIN)
   public Response toQueryLanguage(InputObject ino) {
     try {
+      logger.info("POST /pipeline/map2query\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      logger.info(jsonWriter.writeValueAsString(mapping));
-      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       String output = "";
       if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
@@ -161,10 +159,9 @@ public class OperationResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Response transform(InputObject ino) {
     try {
+      logger.info("POST /pipeline/data2schema\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      logger.info(jsonWriter.writeValueAsString(mapping));
-      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
@@ -200,10 +197,9 @@ public class OperationResource {
   @Produces(MediaType.TEXT_HTML)
   public Response embed(InputObject ino) {
     try {
+      logger.info("POST /pipeline/data2html\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
-      logger.info(jsonWriter.writeValueAsString(mapping));
-      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
