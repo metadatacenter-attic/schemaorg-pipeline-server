@@ -204,18 +204,30 @@ public class OperationResource {
   }
 
   private static void checkLanguageValid(String language) throws Exception {
+    if (Strings.isNullOrEmpty(language)) {
+      String errorMessage = String.format(
+          "Language selection is empty, possible values: %s",
+          MappingLanguages.SUPPORTED_LANGUAGES);
+      throw new Exception(errorMessage);
+    }
     if (!MappingLanguages.SUPPORTED_LANGUAGES.contains(language)) {
       String errorMessage = String.format(
-          "Invalid field value \"language\": \"%s\", must be the following: %s",
+          "Invalid language selection (language: %s), must be the following: %s",
           language, MappingLanguages.SUPPORTED_LANGUAGES);
       throw new Exception(errorMessage);
     }
   }
 
   private static void checkTypeValid(String type) throws Exception {
+    if (Strings.isNullOrEmpty(type)) {
+      String errorMessage = String.format(
+          "Data source selection is empty, possible values: %s",
+          MappingLanguages.SUPPORTED_LANGUAGES);
+      throw new Exception(errorMessage);
+    }
     if (!DataSourceTypes.SUPPORTED_TYPES.contains(type)) {
       String errorMessage = String.format(
-          "Invalid field value \"type\": \"%s\", must be the following: %s",
+          "Invalid data source selection (type: %s), must be the following: %s",
           type, DataSourceTypes.SUPPORTED_TYPES);
       throw new Exception(errorMessage);
     }
