@@ -1,5 +1,6 @@
 package org.metadatacenter.schemaorg.pipeline.server.resources;
 
+import java.util.Map;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -28,12 +29,62 @@ import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 
 @Path("/pipeline")
 public class OperationResource {
 
   private static final Logger logger = LoggerFactory.getLogger(OperationResource.class);
-  private static final ObjectWriter jsonWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
+  private static final ObjectMapper mapper = new ObjectMapper();
+  private static final ObjectWriter jsonWriter = mapper.writerWithDefaultPrettyPrinter();
+
+  @POST
+  @Timed
+  @Path("/end2end")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response all(InputObject ino) {
+    try {
+      final Mapping mapping = checkMappingValid(ino.getMapping());
+      final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
+      logger.info(jsonWriter.writeValueAsString(mapping));
+      logger.info(jsonWriter.writeValueAsString(dataSource));
+      final String dataSourceType = dataSource.getType();
+      Map<String, String> output = Maps.newLinkedHashMap();
+      if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
+        useSparqlPipeline(mapping, dataSource, output);
+      } else if (dataSourceType.equals(DataSourceTypes.XML)) {
+        useXmlPipeline(mapping, dataSource, output);
+      }
+      return Response.status(Status.OK).entity(mapper.writeValueAsString(output)).build();
+    } catch (Exception e) {
+      String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
+      return Response.status(Status.BAD_REQUEST)
+          .type(MediaType.APPLICATION_JSON_TYPE)
+          .entity(errorMessage).build();
+    }
+  }
+
+  private void useSparqlPipeline(Mapping mapping, DataSource dataSource, final Map<String, String> output) {
+    String sparqlQuery = translateToSparql(mapping);
+    output.put("query", sparqlQuery);
+    String rdfDocument = new SparqlEndpointClient(dataSource.getValue()).evaluate(sparqlQuery);
+    String schemaOutput = RdfToSchema.transform(rdfDocument);
+    output.put("schema", schemaOutput);
+    String htmlOutput = SchemaToHtml.transform(schemaOutput);
+    output.put("html", htmlOutput);
+  }
+
+  private void useXmlPipeline(Mapping mapping, DataSource dataSource, final Map<String, String> output) {
+    String stylesheet = translateToXslt(mapping);
+    output.put("query", stylesheet);
+    String xmlOutput = XsltTransformer.newTransformer(stylesheet).transform(dataSource.getValue());
+    String schemaOutput = XmlToSchema.transform(xmlOutput);
+    output.put("schema", schemaOutput);
+    String htmlOutput = SchemaToHtml.transform(schemaOutput);
+    output.put("html", htmlOutput);
+  }
 
   @POST
   @Timed
