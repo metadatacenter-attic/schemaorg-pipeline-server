@@ -22,11 +22,18 @@ import org.metadatacenter.schemaorg.pipeline.server.pojo.DataSourceTypes;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.InputObject;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.Mapping;
 import org.metadatacenter.schemaorg.pipeline.server.pojo.MappingLanguages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Strings;
 
 @Path("/pipeline")
 public class OperationResource {
+
+  private static final Logger logger = LoggerFactory.getLogger(OperationResource.class);
+  private static final ObjectWriter jsonWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
   @POST
   @Timed
@@ -36,10 +43,12 @@ public class OperationResource {
   public Response toSparql(InputObject ino) {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
+      logger.info(jsonWriter.writeValueAsString(mapping));
       String output = translateToSparql(mapping);
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
       return Response.status(Status.BAD_REQUEST)
           .type(MediaType.APPLICATION_JSON_TYPE)
           .entity(errorMessage).build();
@@ -54,10 +63,12 @@ public class OperationResource {
   public Response toXslt(InputObject ino) {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
+      logger.info(jsonWriter.writeValueAsString(mapping));
       String output = translateToXslt(mapping);
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
       return Response.status(Status.BAD_REQUEST)
           .type(MediaType.APPLICATION_JSON_TYPE)
           .entity(errorMessage).build();
@@ -73,6 +84,8 @@ public class OperationResource {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
+      logger.info(jsonWriter.writeValueAsString(mapping));
+      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       String output = "";
       if (dataSourceType.equals(DataSourceTypes.SPARQL_ENDPOINT)) {
@@ -83,6 +96,7 @@ public class OperationResource {
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
       return Response.status(Status.BAD_REQUEST)
           .type(MediaType.APPLICATION_JSON_TYPE)
           .entity(errorMessage).build();
@@ -98,6 +112,8 @@ public class OperationResource {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
+      logger.info(jsonWriter.writeValueAsString(mapping));
+      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
@@ -119,6 +135,7 @@ public class OperationResource {
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
       return Response.status(Status.BAD_REQUEST)
           .type(MediaType.APPLICATION_JSON_TYPE)
           .entity(errorMessage).build();
@@ -134,6 +151,8 @@ public class OperationResource {
     try {
       final Mapping mapping = checkMappingValid(ino.getMapping());
       final DataSource dataSource = checkDataSourceValid(ino.getDataSource());
+      logger.info(jsonWriter.writeValueAsString(mapping));
+      logger.info(jsonWriter.writeValueAsString(dataSource));
       final String dataSourceType = dataSource.getType();
       final String dataSourceValue = dataSource.getValue();
       String output = "{}";
@@ -157,6 +176,7 @@ public class OperationResource {
       return Response.status(Status.OK).entity(output).build();
     } catch (Exception e) {
       String errorMessage = toJsonErrorMessage(Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+      logger.error(errorMessage);
       return Response.status(Status.BAD_REQUEST)
           .type(MediaType.APPLICATION_JSON_TYPE)
           .entity(errorMessage).build();
