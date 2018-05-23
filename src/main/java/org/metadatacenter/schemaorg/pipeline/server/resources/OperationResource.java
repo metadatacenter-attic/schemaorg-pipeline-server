@@ -73,6 +73,7 @@ public class OperationResource {
     output.put("query", sparqlQuery);
     String rdfDocument = new SparqlEndpointClient(dataSource.getValue()).evaluate(sparqlQuery);
     String schemaOutput = RdfToSchema.transform(rdfDocument);
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
     output.put("html", htmlOutput);
@@ -83,6 +84,7 @@ public class OperationResource {
     output.put("query", stylesheet);
     String xmlOutput = XsltTransformer.newTransformer(stylesheet).transform(dataSource.getValue());
     String schemaOutput = XmlToSchema.transform(xmlOutput);
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
     output.put("html", htmlOutput);
