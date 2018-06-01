@@ -10,8 +10,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import org.metadatacenter.schemaorg.pipeline.Pipeline;
 import org.metadatacenter.schemaorg.pipeline.experimental.BioPortalRecommender;
+import org.metadatacenter.schemaorg.pipeline.experimental.DBpediaLookup;
 import org.metadatacenter.schemaorg.pipeline.experimental.SchemaEnrichment;
-import org.metadatacenter.schemaorg.pipeline.experimental.TermLookup;
 import org.metadatacenter.schemaorg.pipeline.operation.embed.SchemaToHtml;
 import org.metadatacenter.schemaorg.pipeline.operation.extract.SparqlEndpointClient;
 import org.metadatacenter.schemaorg.pipeline.operation.extract.XsltTransformer;
@@ -73,6 +73,7 @@ public class OperationResource {
     output.put("query", sparqlQuery);
     String rdfDocument = new SparqlEndpointClient(dataSource.getValue()).evaluate(sparqlQuery);
     String schemaOutput = RdfToSchema.transform(rdfDocument);
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectName(schemaOutput, new DBpediaLookup());
     schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
@@ -84,6 +85,7 @@ public class OperationResource {
     output.put("query", stylesheet);
     String xmlOutput = XsltTransformer.newTransformer(stylesheet).transform(dataSource.getValue());
     String schemaOutput = XmlToSchema.transform(xmlOutput);
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectName(schemaOutput, new DBpediaLookup());
     schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
@@ -163,7 +165,6 @@ public class OperationResource {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response transform(InputObject ino) {
-    TermLookup lookupService = new BioPortalRecommender();
     try {
       logger.info("POST /pipeline/data2schema\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
@@ -177,7 +178,8 @@ public class OperationResource {
         output = Pipeline.create()
             .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, lookupService))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
         String stylesheet = translateToXslt(mapping);
@@ -185,7 +187,8 @@ public class OperationResource {
         output = Pipeline.create()
             .pipe(transformer::transform)
             .pipe(XmlToSchema::transform)
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, lookupService))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
             .run(dataSourceValue);
       }
       return Response.status(Status.OK).entity(output).build();
@@ -204,7 +207,6 @@ public class OperationResource {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.TEXT_HTML)
   public Response embed(InputObject ino) {
-    TermLookup lookupService = new BioPortalRecommender();
     try {
       logger.info("POST /pipeline/data2html\n{}" ,jsonWriter.writeValueAsString(ino));
       final Mapping mapping = checkMappingValid(ino.getMapping());
@@ -218,7 +220,8 @@ public class OperationResource {
         output = Pipeline.create()
             .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, lookupService))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
             .pipe(SchemaToHtml::transform)
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
@@ -227,7 +230,8 @@ public class OperationResource {
         output = Pipeline.create()
             .pipe(transformer::transform)
             .pipe(XmlToSchema::transform)
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, lookupService))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
             .pipe(SchemaToHtml::transform)
             .run(dataSourceValue);
       }
