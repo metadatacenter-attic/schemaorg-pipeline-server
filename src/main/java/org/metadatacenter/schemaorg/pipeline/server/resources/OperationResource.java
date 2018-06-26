@@ -9,7 +9,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import org.metadatacenter.schemaorg.pipeline.Pipeline;
-import org.metadatacenter.schemaorg.pipeline.experimental.BioPortalRecommender;
+import org.metadatacenter.schemaorg.pipeline.experimental.BioPortalLookup;
 import org.metadatacenter.schemaorg.pipeline.experimental.DBpediaLookup;
 import org.metadatacenter.schemaorg.pipeline.experimental.SchemaEnrichment;
 import org.metadatacenter.schemaorg.pipeline.operation.embed.SchemaToHtml;
@@ -74,7 +74,7 @@ public class OperationResource {
     String rdfDocument = new SparqlEndpointClient(dataSource.getValue()).evaluate(sparqlQuery);
     String schemaOutput = RdfToSchema.transform(rdfDocument);
     schemaOutput = SchemaEnrichment.fillOutIdFromObjectName(schemaOutput, new DBpediaLookup());
-    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalLookup());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
     output.put("html", htmlOutput);
@@ -86,7 +86,7 @@ public class OperationResource {
     String xmlOutput = XsltTransformer.newTransformer(stylesheet).transform(dataSource.getValue());
     String schemaOutput = XmlToSchema.transform(xmlOutput);
     schemaOutput = SchemaEnrichment.fillOutIdFromObjectName(schemaOutput, new DBpediaLookup());
-    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalRecommender());
+    schemaOutput = SchemaEnrichment.fillOutIdFromObjectCodeValue(schemaOutput, new BioPortalLookup());
     output.put("schema", schemaOutput);
     String htmlOutput = SchemaToHtml.transform(schemaOutput);
     output.put("html", htmlOutput);
@@ -179,7 +179,7 @@ public class OperationResource {
             .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
             .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalLookup()))
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
         String stylesheet = translateToXslt(mapping);
@@ -188,7 +188,7 @@ public class OperationResource {
             .pipe(transformer::transform)
             .pipe(XmlToSchema::transform)
             .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalLookup()))
             .run(dataSourceValue);
       }
       return Response.status(Status.OK).entity(output).build();
@@ -221,7 +221,7 @@ public class OperationResource {
             .pipe(s -> endpointClient.evaluate(s))
             .pipe(RdfToSchema::transform)
             .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalLookup()))
             .pipe(SchemaToHtml::transform)
             .run(sparqlQuery);
       } else if (dataSourceType.equals(DataSourceTypes.XML)) {
@@ -231,7 +231,7 @@ public class OperationResource {
             .pipe(transformer::transform)
             .pipe(XmlToSchema::transform)
             .pipe(s -> SchemaEnrichment.fillOutIdFromObjectName(s, new DBpediaLookup()))
-            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalRecommender()))
+            .pipe(s -> SchemaEnrichment.fillOutIdFromObjectCodeValue(s, new BioPortalLookup()))
             .pipe(SchemaToHtml::transform)
             .run(dataSourceValue);
       }
